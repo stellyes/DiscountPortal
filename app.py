@@ -81,6 +81,18 @@ def save_code(sheet, code, redeemed=False, redeemed_at=''):
         st.error(f"Error saving code: {str(e)}")
         return False
 
+def save_codes_batch(sheet, codes_list):
+    """Add multiple codes to Google Sheets in a single batch operation"""
+    try:
+        # Prepare rows for batch insert
+        rows = [[str(code), 'False', ''] for code in codes_list]
+        # Append all rows at once
+        sheet.append_rows(rows)
+        return True
+    except Exception as e:
+        st.error(f"Error saving codes in batch: {str(e)}")
+        return False
+
 def update_code_status(sheet, code, redeemed=True):
     """Update code redemption status"""
     try:
@@ -278,17 +290,15 @@ with tab2:
                     codes = load_codes(sheet)
                     new_codes = generate_unique_codes(num_codes, codes.keys())
                     
-                    # Add codes to sheet
-                    success_count = 0
-                    for code in new_codes:
-                        if save_code(sheet, code, False, ''):
-                            success_count += 1
-                    
-                    if success_count > 0:
-                        st.success(f"✅ Generated {success_count} new codes!")
-                        st.rerun()
+                    # Add codes to sheet using batch operation
+                    if new_codes:
+                        if save_codes_batch(sheet, new_codes):
+                            st.success(f"✅ Generated {len(new_codes)} new codes!")
+                            st.rerun()
+                        else:
+                            st.error("Failed to generate codes")
                     else:
-                        st.error("Failed to generate codes")
+                        st.warning("Could not generate unique codes. Try a smaller number.")
         
         st.markdown("---")
         
