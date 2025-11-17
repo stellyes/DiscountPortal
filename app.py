@@ -52,10 +52,19 @@ def load_codes(sheet):
         records = sheet.get_all_records()
         codes = {}
         for record in records:
-            codes[record['Code']] = {
-                'code': record['Code'],
-                'redeemed': record['Redeemed'].lower() == 'true' if isinstance(record['Redeemed'], str) else record['Redeemed'],
-                'redeemed_at': record.get('Redeemed At', '')
+            # Handle different types for Redeemed field
+            redeemed_value = record.get('Redeemed', False)
+            if isinstance(redeemed_value, str):
+                redeemed = redeemed_value.lower() == 'true'
+            elif isinstance(redeemed_value, bool):
+                redeemed = redeemed_value
+            else:
+                redeemed = False
+            
+            codes[str(record['Code'])] = {
+                'code': str(record['Code']),
+                'redeemed': redeemed,
+                'redeemed_at': str(record.get('Redeemed At', ''))
             }
         return codes
     except Exception as e:
@@ -65,7 +74,8 @@ def load_codes(sheet):
 def save_code(sheet, code, redeemed=False, redeemed_at=''):
     """Add a new code to Google Sheets"""
     try:
-        sheet.append_row([code, redeemed, redeemed_at])
+        # Convert boolean to string for consistent storage
+        sheet.append_row([str(code), str(redeemed), str(redeemed_at)])
         return True
     except Exception as e:
         st.error(f"Error saving code: {str(e)}")
@@ -74,10 +84,10 @@ def save_code(sheet, code, redeemed=False, redeemed_at=''):
 def update_code_status(sheet, code, redeemed=True):
     """Update code redemption status"""
     try:
-        cell = sheet.find(code)
+        cell = sheet.find(str(code))
         if cell:
             row = cell.row
-            sheet.update_cell(row, 2, redeemed)  # Update Redeemed column
+            sheet.update_cell(row, 2, str(redeemed))  # Update Redeemed column as string
             if redeemed:
                 sheet.update_cell(row, 3, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))  # Update timestamp
             return True
