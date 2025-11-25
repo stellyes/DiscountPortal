@@ -127,13 +127,23 @@ def save_code(sheet, code, deal='', redeemed=False, redeemed_at=''):
         return False
 
 def save_codes_batch(sheet, codes_list, deal=''):
-    """Add multiple codes to Google Sheets in a single batch operation"""
+    """Add multiple codes to Google Sheets one at a time"""
     try:
-        # Prepare rows for batch insert
-        rows = [[str(code), str(deal), 'False', ''] for code in codes_list]
-        # Append all rows at once
-        sheet.append_rows(rows, value_input_option='USER_ENTERED')
-        return True
+        success_count = 0
+        for code in codes_list:
+            try:
+                # Append one row at a time
+                sheet.append_row([str(code), str(deal), 'False', ''], value_input_option='USER_ENTERED')
+                success_count += 1
+            except Exception as row_error:
+                st.warning(f"Failed to save code {code}: {str(row_error)}")
+        
+        if success_count > 0:
+            st.info(f"Successfully saved {success_count} out of {len(codes_list)} codes")
+            return True
+        else:
+            st.error(f"Failed to save any codes")
+            return False
     except Exception as e:
         st.error(f"Error saving codes in batch: {str(e)}")
         import traceback
