@@ -127,41 +127,30 @@ def save_code(sheet, code, deal='', redeemed=False, redeemed_at=''):
         return False
 
 def save_codes_batch(sheet, codes_list, deal=''):
-    """Add multiple codes to Google Sheets one at a time"""
+    """Add multiple codes to Google Sheets"""
     try:
-        # Verify sheet connection
-        if sheet is None:
-            st.error("Sheet object is None!")
-            return False
+        # Get the current number of rows with data in column A
+        col_a_values = sheet.col_values(1)  # Get all values in column A
+        next_row = len(col_a_values) + 1
         
-        # Test that we can access the sheet
-        try:
-            sheet_title = sheet.title
-            st.info(f"Connected to sheet: {sheet_title}")
-        except Exception as e:
-            st.error(f"Cannot access sheet: {str(e)}")
-            return False
+        st.info(f"Next available row: {next_row}")
         
-        success_count = 0
-        for code in codes_list:
-            try:
-                # Append one row at a time
-                result = sheet.append_row([str(code), str(deal), 'False', ''], value_input_option='USER_ENTERED')
-                st.info(f"Append result for {code}: {result}")
-                success_count += 1
-            except Exception as row_error:
-                st.error(f"Failed to save code {code}: {str(row_error)}")
-                import traceback
-                st.error(f"Traceback: {traceback.format_exc()}")
+        # Prepare rows for batch insert
+        rows = [[str(code), str(deal), 'False', ''] for code in codes_list]
         
-        if success_count > 0:
-            st.info(f"Successfully saved {success_count} out of {len(codes_list)} codes")
-            return True
-        else:
-            st.error(f"Failed to save any codes")
-            return False
+        # Update specific range A:D starting at next_row
+        end_row = next_row + len(rows) - 1
+        range_notation = f'A{next_row}:D{end_row}'
+        
+        st.info(f"Writing to range: {range_notation}")
+        
+        result = sheet.update(range_notation, rows, value_input_option='USER_ENTERED')
+        
+        st.info(f"Update result: {result}")
+        
+        return True
     except Exception as e:
-        st.error(f"Error saving codes in batch: {str(e)}")
+        st.error(f"Error saving codes: {str(e)}")
         import traceback
         st.error(f"Traceback: {traceback.format_exc()}")
         return False
