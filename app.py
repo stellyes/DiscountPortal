@@ -144,7 +144,8 @@ def save_codes_batch(sheet, codes_list, deal=''):
         
         st.info(f"Writing to range: {range_notation}")
         
-        result = sheet.update(range_notation, rows, value_input_option='USER_ENTERED')
+        # Use named arguments to avoid deprecation warning
+        result = sheet.update(values=rows, range_name=range_notation, value_input_option='USER_ENTERED')
         
         st.info(f"Update result: {result}")
         
@@ -479,13 +480,13 @@ with tab2:
                             redeemed_info = f"<div style='font-size: 0.8em; margin-top: 0.3rem; color: #666;'>Redeemed: {data['redeemed_at']}</div>"
                         
                         deal_info = ""
-                        if data.get("deal"):
+                        if data.get("deal") and data["deal"].strip():
                             deal_info = f"<div style='font-size: 0.85em; margin-top: 0.3rem; color: #1976d2;'>💼 {data['deal']}</div>"
                         
                         st.markdown(f"""
                             <div class="code-box {css_class}">
                                 <div style="font-size: 1.2em; font-weight: bold; font-family: monospace;">
-                                    {code}
+                                    {data['code']}
                                 </div>
                                 <div style="font-size: 0.8em; margin-top: 0.3rem;">
                                     Status: {status}
