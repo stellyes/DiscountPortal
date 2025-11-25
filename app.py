@@ -58,23 +58,48 @@ def load_codes(sheet):
         if len(all_values) < 2:
             return {}
         
-        # Get headers from first row
-        headers = all_values[0]
+        # Get headers from first row and clean them
+        headers = [str(h).strip() for h in all_values[0]]
         
-        # Find column indices
-        code_idx = headers.index('Code') if 'Code' in headers else 0
-        deal_idx = headers.index('Deal') if 'Deal' in headers else 1
-        redeemed_idx = headers.index('Redeemed') if 'Redeemed' in headers else 2
-        redeemed_at_idx = headers.index('Redeemed At') if 'Redeemed At' in headers else 3
+        # Find column indices - search for headers case-insensitively
+        code_idx = None
+        deal_idx = None
+        redeemed_idx = None
+        redeemed_at_idx = None
+        
+        for i, header in enumerate(headers):
+            header_lower = header.lower()
+            if 'code' in header_lower:
+                code_idx = i
+            elif 'deal' in header_lower:
+                deal_idx = i
+            elif 'redeem' in header_lower and 'at' not in header_lower:
+                redeemed_idx = i
+            elif 'redeem' in header_lower and 'at' in header_lower:
+                redeemed_at_idx = i
+        
+        # Fallback to positional if headers not found
+        if code_idx is None:
+            code_idx = 0
+        if deal_idx is None:
+            deal_idx = 1
+        if redeemed_idx is None:
+            redeemed_idx = 2
+        if redeemed_at_idx is None:
+            redeemed_at_idx = 3
         
         codes = {}
         # Process data rows (skip header)
         for row in all_values[1:]:
+            # Skip empty rows
+            if not row or not any(row):
+                continue
+                
             if len(row) > code_idx and row[code_idx]:
-                code = str(row[code_idx])
-                deal = str(row[deal_idx]) if len(row) > deal_idx else ''
+                code = str(row[code_idx]).strip()
+                deal = str(row[deal_idx]).strip() if len(row) > deal_idx and row[deal_idx] else ''
                 redeemed_value = row[redeemed_idx] if len(row) > redeemed_idx else False
-                redeemed_at = str(row[redeemed_at_idx]) if len(row) > redeemed_at_idx else ''
+                redeemed_at = str(row[redeemed_at_idx]).strip() if len(row) > redeemed_at_idx and row[redeemed_at_idx] else ''
                 
                 # Handle different types for Redeemed field
                 if isinstance(redeemed_value, str):
@@ -256,22 +281,28 @@ with tab1:
                         st.error("❌ Invalid code")
                     elif codes[code_input]["redeemed"]:
                         st.warning("⚠️ This code has already been redeemed")
-                        # Still show deal info for redeemed codes
-                        if codes[code_input]["deal"]:
+                        # Show deal info for redeemed codes
+                        deal_text = codes[code_input].get("deal", "")
+                        if deal_text and deal_text.strip():
                             st.markdown(f"""
                                 <div class="deal-info">
-                                    <strong>💼 Deal:</strong> {codes[code_input]["deal"]}
+                                    <strong>💼 Deal:</strong> {deal_text}
                                 </div>
                             """, unsafe_allow_html=True)
+                        else:
+                            st.info("No deal information associated with this code.")
                     else:
                         st.success("✅ Valid code! Ready to redeem.")
                         # Show deal information
-                        if codes[code_input]["deal"]:
+                        deal_text = codes[code_input].get("deal", "")
+                        if deal_text and deal_text.strip():
                             st.markdown(f"""
                                 <div class="deal-info">
-                                    <strong>💼 Deal:</strong> {codes[code_input]["deal"]}
+                                    <strong>💼 Deal:</strong> {deal_text}
                                 </div>
                             """, unsafe_allow_html=True)
+                        else:
+                            st.info("No deal information associated with this code.")
     
     with col2:
         if st.button("✨ Redeem Code", use_container_width=True, type="primary"):
@@ -288,12 +319,15 @@ with tab1:
                         if update_code_status(sheet, code_input, True):
                             st.success("🎉 Code successfully redeemed!")
                             # Show deal information
-                            if codes[code_input]["deal"]:
+                            deal_text = codes[code_input].get("deal", "")
+                            if deal_text and deal_text.strip():
                                 st.markdown(f"""
                                     <div class="deal-info">
-                                        <strong>💼 Deal:</strong> {codes[code_input]["deal"]}
+                                        <strong>💼 Your Discount:</strong> {deal_text}
                                     </div>
                                 """, unsafe_allow_html=True)
+                            else:
+                                st.info("No deal information associated with this code.")
                             st.balloons()
                         else:
                             st.error("Error redeeming code. Please try again.")
