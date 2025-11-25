@@ -132,10 +132,12 @@ def save_codes_batch(sheet, codes_list, deal=''):
         # Prepare rows for batch insert
         rows = [[str(code), str(deal), 'False', ''] for code in codes_list]
         # Append all rows at once
-        sheet.append_rows(rows)
+        sheet.append_rows(rows, value_input_option='USER_ENTERED')
         return True
     except Exception as e:
         st.error(f"Error saving codes in batch: {str(e)}")
+        import traceback
+        st.error(f"Traceback: {traceback.format_exc()}")
         return False
 
 def update_code_status(sheet, code, redeemed=True):
