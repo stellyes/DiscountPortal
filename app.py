@@ -293,9 +293,9 @@ with tab1:
                         deal_text = codes[code_input].get("deal", "")
                         if deal_text and deal_text.strip():
                             st.markdown(f"""
-                                <div class="deal-info">
-                                    <strong>💼 Deal:</strong> {deal_text}
-                                </div>
+                                <h1 style="text-align: center; color: #1976d2; margin: 2rem 0;">
+                                    💼 {deal_text}
+                                </h1>
                             """, unsafe_allow_html=True)
                         else:
                             st.info("No deal information associated with this code.")
@@ -305,9 +305,9 @@ with tab1:
                         deal_text = codes[code_input].get("deal", "")
                         if deal_text and deal_text.strip():
                             st.markdown(f"""
-                                <div class="deal-info">
-                                    <strong>💼 Deal:</strong> {deal_text}
-                                </div>
+                                <h1 style="text-align: center; color: #1976d2; margin: 2rem 0;">
+                                    💼 {deal_text}
+                                </h1>
                             """, unsafe_allow_html=True)
                         else:
                             st.info("No deal information associated with this code.")
@@ -330,9 +330,9 @@ with tab1:
                             deal_text = codes[code_input].get("deal", "")
                             if deal_text and deal_text.strip():
                                 st.markdown(f"""
-                                    <div class="deal-info">
-                                        <strong>💼 Your Discount:</strong> {deal_text}
-                                    </div>
+                                    <h1 style="text-align: center; color: #1976d2; margin: 2rem 0;">
+                                        💼 {deal_text}
+                                    </h1>
                                 """, unsafe_allow_html=True)
                             else:
                                 st.info("No deal information associated with this code.")
