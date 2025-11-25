@@ -383,15 +383,22 @@ with tab2:
                 with st.spinner(f"Generating {num_codes} codes..."):
                     try:
                         codes = load_codes(sheet)
+                        st.info(f"Currently have {len(codes)} existing codes")
+                        
                         new_codes = generate_unique_codes(num_codes, codes.keys())
+                        st.info(f"Generated {len(new_codes)} new unique codes")
                         
                         # Add codes to sheet using batch operation
                         if new_codes:
-                            if save_codes_batch(sheet, new_codes, deal_input):
+                            st.info(f"Attempting to save codes with deal: '{deal_input}'")
+                            result = save_codes_batch(sheet, new_codes, deal_input)
+                            st.info(f"Save result: {result}")
+                            
+                            if result:
                                 st.success(f"✅ Generated {len(new_codes)} new codes!")
                                 st.balloons()
                                 import time
-                                time.sleep(2)
+                                time.sleep(3)
                                 st.rerun()
                             else:
                                 st.error("Failed to save codes to sheet")
@@ -399,6 +406,8 @@ with tab2:
                             st.warning("Could not generate unique codes. Try a smaller number.")
                     except Exception as e:
                         st.error(f"Error during code generation: {str(e)}")
+                        import traceback
+                        st.error(f"Traceback: {traceback.format_exc()}")
         
         st.markdown("---")
         
