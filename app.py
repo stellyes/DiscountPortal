@@ -37,14 +37,10 @@ def connect_to_sheet():
         spreadsheet_url = st.secrets["spreadsheet_url"]
         sheet = client.open_by_url(spreadsheet_url).sheet1
         
-        # Initialize headers if empty or update if needed
+        # Initialize headers if empty - don't modify existing sheets
         headers = sheet.row_values(1)
-        if not headers:
-            sheet.append_row(['Code', 'Deal', 'Redeemed', 'Redeemed At'])
-        elif 'Deal' not in headers:
-            # Migrate existing sheet by inserting Deal column
-            sheet.insert_cols([['']] * sheet.row_count, col=2)
-            sheet.update_cell(1, 2, 'Deal')
+        if not headers or not any(headers):
+            sheet.update('A1:D1', [['Code', 'Deal', 'Redeemed', 'Redeemed At']])
         
         return sheet
     except Exception as e:
@@ -383,18 +379,21 @@ with tab2:
             st.write("")  # Spacing
             if st.button("➕ Generate", use_container_width=True, type="primary"):
                 with st.spinner(f"Generating {num_codes} codes..."):
-                    codes = load_codes(sheet)
-                    new_codes = generate_unique_codes(num_codes, codes.keys())
-                    
-                    # Add codes to sheet using batch operation
-                    if new_codes:
-                        if save_codes_batch(sheet, new_codes, deal_input):
-                            st.success(f"✅ Generated {len(new_codes)} new codes!")
-                            st.rerun()
+                    try:
+                        codes = load_codes(sheet)
+                        new_codes = generate_unique_codes(num_codes, codes.keys())
+                        
+                        # Add codes to sheet using batch operation
+                        if new_codes:
+                            if save_codes_batch(sheet, new_codes, deal_input):
+                                st.success(f"✅ Generated {len(new_codes)} new codes!")
+                                st.rerun()
+                            else:
+                                st.error("Failed to save codes to sheet")
                         else:
-                            st.error("Failed to generate codes")
-                    else:
-                        st.warning("Could not generate unique codes. Try a smaller number.")
+                            st.warning("Could not generate unique codes. Try a smaller number.")
+                    except Exception as e:
+                        st.error(f"Error during code generation: {str(e)}")
         
         st.markdown("---")
         
