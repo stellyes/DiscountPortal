@@ -54,24 +54,42 @@ def connect_to_sheet():
 def load_codes(sheet):
     """Load all codes from Google Sheets"""
     try:
-        records = sheet.get_all_records()
+        all_values = sheet.get_all_values()
+        if len(all_values) < 2:
+            return {}
+        
+        # Get headers from first row
+        headers = all_values[0]
+        
+        # Find column indices
+        code_idx = headers.index('Code') if 'Code' in headers else 0
+        deal_idx = headers.index('Deal') if 'Deal' in headers else 1
+        redeemed_idx = headers.index('Redeemed') if 'Redeemed' in headers else 2
+        redeemed_at_idx = headers.index('Redeemed At') if 'Redeemed At' in headers else 3
+        
         codes = {}
-        for record in records:
-            # Handle different types for Redeemed field
-            redeemed_value = record.get('Redeemed', False)
-            if isinstance(redeemed_value, str):
-                redeemed = redeemed_value.lower() == 'true'
-            elif isinstance(redeemed_value, bool):
-                redeemed = redeemed_value
-            else:
-                redeemed = False
-            
-            codes[str(record['Code'])] = {
-                'code': str(record['Code']),
-                'deal': str(record.get('Deal', '')),
-                'redeemed': redeemed,
-                'redeemed_at': str(record.get('Redeemed At', ''))
-            }
+        # Process data rows (skip header)
+        for row in all_values[1:]:
+            if len(row) > code_idx and row[code_idx]:
+                code = str(row[code_idx])
+                deal = str(row[deal_idx]) if len(row) > deal_idx else ''
+                redeemed_value = row[redeemed_idx] if len(row) > redeemed_idx else False
+                redeemed_at = str(row[redeemed_at_idx]) if len(row) > redeemed_at_idx else ''
+                
+                # Handle different types for Redeemed field
+                if isinstance(redeemed_value, str):
+                    redeemed = redeemed_value.lower() == 'true'
+                elif isinstance(redeemed_value, bool):
+                    redeemed = redeemed_value
+                else:
+                    redeemed = False
+                
+                codes[code] = {
+                    'code': code,
+                    'deal': deal,
+                    'redeemed': redeemed,
+                    'redeemed_at': redeemed_at
+                }
         return codes
     except Exception as e:
         st.error(f"Error loading codes: {str(e)}")
