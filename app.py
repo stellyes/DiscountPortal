@@ -65,11 +65,11 @@ def load_codes(sheet):
         
         for i, header in enumerate(headers):
             header_lower = header.lower()
-            if 'code' in header_lower:
+            if header_lower == 'code':
                 code_idx = i
-            elif 'deal' in header_lower:
+            elif header_lower == 'deal':
                 deal_idx = i
-            elif 'redeem' in header_lower and 'at' not in header_lower:
+            elif header_lower == 'redeemed':
                 redeemed_idx = i
             elif 'redeem' in header_lower and 'at' in header_lower:
                 redeemed_at_idx = i
@@ -133,8 +133,6 @@ def save_codes_batch(sheet, codes_list, deal=''):
         col_a_values = sheet.col_values(1)  # Get all values in column A
         next_row = len(col_a_values) + 1
         
-        st.info(f"Next available row: {next_row}")
-        
         # Prepare rows for batch insert
         rows = [[str(code), str(deal), 'False', ''] for code in codes_list]
         
@@ -142,12 +140,8 @@ def save_codes_batch(sheet, codes_list, deal=''):
         end_row = next_row + len(rows) - 1
         range_notation = f'A{next_row}:D{end_row}'
         
-        st.info(f"Writing to range: {range_notation}")
-        
         # Use named arguments to avoid deprecation warning
-        result = sheet.update(values=rows, range_name=range_notation, value_input_option='USER_ENTERED')
-        
-        st.info(f"Update result: {result}")
+        sheet.update(values=rows, range_name=range_notation, value_input_option='USER_ENTERED')
         
         return True
     except Exception as e:
@@ -399,22 +393,17 @@ with tab2:
                 with st.spinner(f"Generating {num_codes} codes..."):
                     try:
                         codes = load_codes(sheet)
-                        st.info(f"Currently have {len(codes)} existing codes")
-                        
                         new_codes = generate_unique_codes(num_codes, codes.keys())
-                        st.info(f"Generated {len(new_codes)} new unique codes")
                         
                         # Add codes to sheet using batch operation
                         if new_codes:
-                            st.info(f"Attempting to save codes with deal: '{deal_input}'")
                             result = save_codes_batch(sheet, new_codes, deal_input)
-                            st.info(f"Save result: {result}")
                             
                             if result:
                                 st.success(f"✅ Generated {len(new_codes)} new codes!")
                                 st.balloons()
                                 import time
-                                time.sleep(3)
+                                time.sleep(2)
                                 st.rerun()
                             else:
                                 st.error("Failed to save codes to sheet")
