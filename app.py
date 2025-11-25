@@ -129,14 +129,30 @@ def save_code(sheet, code, deal='', redeemed=False, redeemed_at=''):
 def save_codes_batch(sheet, codes_list, deal=''):
     """Add multiple codes to Google Sheets one at a time"""
     try:
+        # Verify sheet connection
+        if sheet is None:
+            st.error("Sheet object is None!")
+            return False
+        
+        # Test that we can access the sheet
+        try:
+            sheet_title = sheet.title
+            st.info(f"Connected to sheet: {sheet_title}")
+        except Exception as e:
+            st.error(f"Cannot access sheet: {str(e)}")
+            return False
+        
         success_count = 0
         for code in codes_list:
             try:
                 # Append one row at a time
-                sheet.append_row([str(code), str(deal), 'False', ''], value_input_option='USER_ENTERED')
+                result = sheet.append_row([str(code), str(deal), 'False', ''], value_input_option='USER_ENTERED')
+                st.info(f"Append result for {code}: {result}")
                 success_count += 1
             except Exception as row_error:
-                st.warning(f"Failed to save code {code}: {str(row_error)}")
+                st.error(f"Failed to save code {code}: {str(row_error)}")
+                import traceback
+                st.error(f"Traceback: {traceback.format_exc()}")
         
         if success_count > 0:
             st.info(f"Successfully saved {success_count} out of {len(codes_list)} codes")
