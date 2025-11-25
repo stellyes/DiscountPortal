@@ -37,9 +37,14 @@ def connect_to_sheet():
         spreadsheet_url = st.secrets["spreadsheet_url"]
         sheet = client.open_by_url(spreadsheet_url).sheet1
         
-        # Initialize headers if empty
-        if not sheet.row_values(1):
-            sheet.append_row(['Code', 'Redeemed', 'Redeemed At'])
+        # Initialize headers if empty or update if needed
+        headers = sheet.row_values(1)
+        if not headers:
+            sheet.append_row(['Code', 'Deal', 'Redeemed', 'Redeemed At'])
+        elif 'Deal' not in headers:
+            # Migrate existing sheet by inserting Deal column
+            sheet.insert_cols([['']] * sheet.row_count, col=2)
+            sheet.update_cell(1, 2, 'Deal')
         
         return sheet
     except Exception as e:
@@ -63,6 +68,7 @@ def load_codes(sheet):
             
             codes[str(record['Code'])] = {
                 'code': str(record['Code']),
+                'deal': str(record.get('Deal', '')),
                 'redeemed': redeemed,
                 'redeemed_at': str(record.get('Redeemed At', ''))
             }
@@ -71,21 +77,21 @@ def load_codes(sheet):
         st.error(f"Error loading codes: {str(e)}")
         return {}
 
-def save_code(sheet, code, redeemed=False, redeemed_at=''):
+def save_code(sheet, code, deal='', redeemed=False, redeemed_at=''):
     """Add a new code to Google Sheets"""
     try:
         # Convert boolean to string for consistent storage
-        sheet.append_row([str(code), str(redeemed), str(redeemed_at)])
+        sheet.append_row([str(code), str(deal), str(redeemed), str(redeemed_at)])
         return True
     except Exception as e:
         st.error(f"Error saving code: {str(e)}")
         return False
 
-def save_codes_batch(sheet, codes_list):
+def save_codes_batch(sheet, codes_list, deal=''):
     """Add multiple codes to Google Sheets in a single batch operation"""
     try:
         # Prepare rows for batch insert
-        rows = [[str(code), 'False', ''] for code in codes_list]
+        rows = [[str(code), str(deal), 'False', ''] for code in codes_list]
         # Append all rows at once
         sheet.append_rows(rows)
         return True
@@ -99,9 +105,11 @@ def update_code_status(sheet, code, redeemed=True):
         cell = sheet.find(str(code))
         if cell:
             row = cell.row
-            sheet.update_cell(row, 2, str(redeemed))  # Update Redeemed column as string
+            sheet.update_cell(row, 3, str(redeemed))  # Update Redeemed column (now column 3)
             if redeemed:
-                sheet.update_cell(row, 3, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))  # Update timestamp
+                sheet.update_cell(row, 4, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))  # Update timestamp
+            else:
+                sheet.update_cell(row, 4, '')  # Clear timestamp when unredeemed
             return True
         return False
     except Exception as e:
@@ -172,6 +180,13 @@ st.markdown("""
         border-color: #4caf50;
         color: #2e7d32;
     }
+    .deal-info {
+        background-color: #e3f2fd;
+        border-left: 4px solid #2196f3;
+        padding: 1rem;
+        margin: 1rem 0;
+        border-radius: 4px;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -221,8 +236,22 @@ with tab1:
                         st.error("❌ Invalid code")
                     elif codes[code_input]["redeemed"]:
                         st.warning("⚠️ This code has already been redeemed")
+                        # Still show deal info for redeemed codes
+                        if codes[code_input]["deal"]:
+                            st.markdown(f"""
+                                <div class="deal-info">
+                                    <strong>💼 Deal:</strong> {codes[code_input]["deal"]}
+                                </div>
+                            """, unsafe_allow_html=True)
                     else:
                         st.success("✅ Valid code! Ready to redeem.")
+                        # Show deal information
+                        if codes[code_input]["deal"]:
+                            st.markdown(f"""
+                                <div class="deal-info">
+                                    <strong>💼 Deal:</strong> {codes[code_input]["deal"]}
+                                </div>
+                            """, unsafe_allow_html=True)
     
     with col2:
         if st.button("✨ Redeem Code", use_container_width=True, type="primary"):
@@ -238,6 +267,13 @@ with tab1:
                     else:
                         if update_code_status(sheet, code_input, True):
                             st.success("🎉 Code successfully redeemed!")
+                            # Show deal information
+                            if codes[code_input]["deal"]:
+                                st.markdown(f"""
+                                    <div class="deal-info">
+                                        <strong>💼 Deal:</strong> {codes[code_input]["deal"]}
+                                    </div>
+                                """, unsafe_allow_html=True)
                             st.balloons()
                         else:
                             st.error("Error redeeming code. Please try again.")
@@ -272,6 +308,12 @@ with tab2:
         # Generate codes section
         st.subheader("Generate New Codes")
         
+        deal_input = st.text_input(
+            "Deal/Promotion Description (optional):",
+            placeholder="e.g., 20% off all items, Free shipping",
+            key="deal_input"
+        )
+        
         col1, col2 = st.columns([2, 1])
         with col1:
             num_codes = st.number_input(
@@ -292,7 +334,7 @@ with tab2:
                     
                     # Add codes to sheet using batch operation
                     if new_codes:
-                        if save_codes_batch(sheet, new_codes):
+                        if save_codes_batch(sheet, new_codes, deal_input):
                             st.success(f"✅ Generated {len(new_codes)} new codes!")
                             st.rerun()
                         else:
@@ -342,19 +384,21 @@ with tab2:
             }
             
             if filtered_codes:
-                # Create columns for grid layout
-                num_cols = 4
-                cols = st.columns(num_cols)
-                
-                for idx, (code, data) in enumerate(sorted(filtered_codes.items())):
-                    col_idx = idx % num_cols
-                    with cols[col_idx]:
-                        status = "Redeemed" if data["redeemed"] else "Available"
-                        css_class = "code-redeemed" if data["redeemed"] else "code-available"
-                        
+                # Display codes with reinvoke option
+                for code, data in sorted(filtered_codes.items()):
+                    status = "Redeemed" if data["redeemed"] else "Available"
+                    css_class = "code-redeemed" if data["redeemed"] else "code-available"
+                    
+                    col1, col2 = st.columns([3, 1])
+                    
+                    with col1:
                         redeemed_info = ""
                         if data["redeemed"] and data.get("redeemed_at"):
-                            redeemed_info = f"<div style='font-size: 0.7em; margin-top: 0.2rem;'>{data['redeemed_at']}</div>"
+                            redeemed_info = f"<div style='font-size: 0.8em; margin-top: 0.3rem; color: #666;'>Redeemed: {data['redeemed_at']}</div>"
+                        
+                        deal_info = ""
+                        if data.get("deal"):
+                            deal_info = f"<div style='font-size: 0.85em; margin-top: 0.3rem; color: #1976d2;'>💼 {data['deal']}</div>"
                         
                         st.markdown(f"""
                             <div class="code-box {css_class}">
@@ -362,11 +406,25 @@ with tab2:
                                     {code}
                                 </div>
                                 <div style="font-size: 0.8em; margin-top: 0.3rem;">
-                                    {status}
+                                    Status: {status}
                                 </div>
+                                {deal_info}
                                 {redeemed_info}
                             </div>
                         """, unsafe_allow_html=True)
+                    
+                    with col2:
+                        # Show reinvoke button only for redeemed codes
+                        if data["redeemed"]:
+                            if st.button("🔄 Reinvoke", key=f"reinvoke_{code}", use_container_width=True):
+                                with st.spinner(f"Reinvoking {code}..."):
+                                    if update_code_status(sheet, code, False):
+                                        st.success(f"✅ Code {code} has been reinstated!")
+                                        st.rerun()
+                                    else:
+                                        st.error(f"Error reinvoking {code}")
+                        else:
+                            st.write("")  # Spacing for alignment
             else:
                 st.info("No codes match the selected filter.")
             
@@ -397,5 +455,6 @@ st.markdown("""
     <div style="text-align: center; color: #666; font-size: 0.8em;">
         <p>💡 Codes are stored in Google Sheets for persistence</p>
         <p>🔐 Admin password configured via Streamlit secrets</p>
+        <p>💼 Associate deals with code batches for better tracking</p>
     </div>
 """, unsafe_allow_html=True)
