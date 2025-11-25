@@ -387,6 +387,9 @@ with tab2:
                         if new_codes:
                             if save_codes_batch(sheet, new_codes, deal_input):
                                 st.success(f"✅ Generated {len(new_codes)} new codes!")
+                                st.balloons()
+                                import time
+                                time.sleep(2)
                                 st.rerun()
                             else:
                                 st.error("Failed to save codes to sheet")
