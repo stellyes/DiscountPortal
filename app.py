@@ -117,8 +117,10 @@ def update_code_status(sheet, code, redeemed=True):
         return False
 
 def generate_code():
-    """Generate a random 4-character alphanumeric code"""
-    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
+    """Generate a random 8-character alphanumeric code in format XXXX-XXXX"""
+    part1 = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
+    part2 = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
+    return f"{part1}-{part2}"
 
 def generate_unique_codes(num_codes, existing_codes):
     """Generate unique codes that don't already exist"""
@@ -218,8 +220,8 @@ with tab1:
     
     code_input = st.text_input(
         "Enter your discount code:",
-        max_chars=4,
-        placeholder="XXXX",
+        max_chars=9,
+        placeholder="XXXX-XXXX",
         key="code_input"
     ).upper()
     
