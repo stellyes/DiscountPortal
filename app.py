@@ -1,4 +1,3 @@
-import re
 import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
@@ -100,8 +99,7 @@ def load_codes(sheet):
                 
                 # Handle different types for Redeemed field
                 if isinstance(redeemed_value, str):
-                    redeemed_str = redeemed_value.strip().upper()
-                    redeemed = redeemed_str == 'TRUE'
+                    redeemed = redeemed_value.lower() == 'true'
                 elif isinstance(redeemed_value, bool):
                     redeemed = redeemed_value
                 else:
@@ -152,31 +150,22 @@ def save_codes_batch(sheet, codes_list, deal=''):
         st.error(f"Traceback: {traceback.format_exc()}")
         return False
 
-
 def update_code_status(sheet, code, redeemed=True):
     """Update code redemption status"""
     try:
-        # Escape the code so regex does not break
-        escaped_code = re.escape(code)
-
-        # Exact match: ^literal_code$
-        cell = sheet.find(f'^{escaped_code}$')
-
+        cell = sheet.find(str(code))
         if cell:
             row = cell.row
-            sheet.update_cell(row, 3, str(redeemed))
+            sheet.update_cell(row, 3, str(redeemed))  # Update Redeemed column (now column 3)
             if redeemed:
-                sheet.update_cell(row, 4, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+                sheet.update_cell(row, 4, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))  # Update timestamp
             else:
-                sheet.update_cell(row, 4, '')
+                sheet.update_cell(row, 4, '')  # Clear timestamp when unredeemed
             return True
-
         return False
-
     except Exception as e:
         st.error(f"Error updating code: {str(e)}")
         return False
-
 
 def generate_code():
     """Generate a random 8-character alphanumeric code in format XXXX-XXXX"""
@@ -332,38 +321,31 @@ with tab1:
                     codes = load_codes(sheet)
                     if code_input not in codes:
                         st.error("❌ Invalid code")
+                    elif codes[code_input]["redeemed"]:
+                        st.warning("⚠️ This code has already been redeemed")
                     else:
-                        # Debug: show what we're reading
-                        st.info(f"Debug - Code data: {codes[code_input]}")
+                        # Store deal text before redemption
+                        deal_text = codes[code_input].get("deal", "")
                         
-                        if codes[code_input]["redeemed"]:
-                            st.warning("⚠️ This code has already been redeemed")
-                            # Show deal info for already redeemed codes
-                            deal_text = codes[code_input].get("deal", "")
+                        if update_code_status(sheet, code_input, True):
+                            st.success("🎉 Code successfully redeemed!")
+                            # Show deal information
                             if deal_text and deal_text.strip():
                                 st.markdown(f"""
                                     <h1 style="text-align: center; color: #1976d2; margin: 2rem 0;">
                                         💼 {deal_text}
                                     </h1>
                                 """, unsafe_allow_html=True)
-                        else:
-                            # Store deal text before redemption
-                            deal_text = codes[code_input].get("deal", "")
-                            
-                            if update_code_status(sheet, code_input, True):
-                                st.success("🎉 Code successfully redeemed!")
-                                # Show deal information
-                                if deal_text and deal_text.strip():
-                                    st.markdown(f"""
-                                        <h1 style="text-align: center; color: #1976d2; margin: 2rem 0;">
-                                            💼 {deal_text}
-                                        </h1>
-                                    """, unsafe_allow_html=True)
-                                else:
-                                    st.info("No deal information associated with this code.")
-                                st.balloons()
                             else:
-                                st.error("Error redeeming code. Please try again.")
+                                st.info("No deal information associated with this code.")
+                            st.balloons()
+                            
+                            # Add a small delay then rerun to refresh the state
+                            import time
+                            time.sleep(2)
+                            st.rerun()
+                        else:
+                            st.error("Error redeeming code. Please try again.")
 
 # TAB 2: Admin
 with tab2:
