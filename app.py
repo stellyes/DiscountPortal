@@ -154,19 +154,24 @@ def save_codes_batch(sheet, codes_list, deal=''):
 def update_code_status(sheet, code, redeemed=True):
     """Update code redemption status"""
     try:
-        cell = sheet.find(str(code))
+        # Use exact-match regex to avoid matching substrings
+        cell = sheet.find(f'^{code}$')
+
         if cell:
             row = cell.row
-            sheet.update_cell(row, 3, str(redeemed))  # Update Redeemed column (now column 3)
+            sheet.update_cell(row, 3, str(redeemed))  # Update Redeemed column
             if redeemed:
-                sheet.update_cell(row, 4, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))  # Update timestamp
+                sheet.update_cell(row, 4, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
             else:
-                sheet.update_cell(row, 4, '')  # Clear timestamp when unredeemed
+                sheet.update_cell(row, 4, '')
             return True
+
         return False
+
     except Exception as e:
         st.error(f"Error updating code: {str(e)}")
         return False
+
 
 def generate_code():
     """Generate a random 8-character alphanumeric code in format XXXX-XXXX"""
