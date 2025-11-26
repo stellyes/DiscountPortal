@@ -165,7 +165,6 @@ def update_code_status(sheet, code, redeemed=True):
                 break
         
         if target_row is None:
-            st.error(f"Could not find code {code} in sheet")
             return False
         
         # Update column C (index 3) with redeemed status
@@ -179,13 +178,9 @@ def update_code_status(sheet, code, redeemed=True):
         else:
             sheet.update_cell(target_row, 4, '')
         
-        st.info(f"Updated row {target_row}: Redeemed={redeemed_str}, Timestamp={'set' if redeemed else 'cleared'}")
-        
         return True
     except Exception as e:
         st.error(f"Error updating code: {str(e)}")
-        import traceback
-        st.error(f"Traceback: {traceback.format_exc()}")
         return False
 
 def generate_code():
