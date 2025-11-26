@@ -1,3 +1,4 @@
+import re
 import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
@@ -151,15 +152,19 @@ def save_codes_batch(sheet, codes_list, deal=''):
         st.error(f"Traceback: {traceback.format_exc()}")
         return False
 
+
 def update_code_status(sheet, code, redeemed=True):
     """Update code redemption status"""
     try:
-        # Use exact-match regex to avoid matching substrings
-        cell = sheet.find(f'^{code}$')
+        # Escape the code so regex does not break
+        escaped_code = re.escape(code)
+
+        # Exact match: ^literal_code$
+        cell = sheet.find(f'^{escaped_code}$')
 
         if cell:
             row = cell.row
-            sheet.update_cell(row, 3, str(redeemed))  # Update Redeemed column
+            sheet.update_cell(row, 3, str(redeemed))
             if redeemed:
                 sheet.update_cell(row, 4, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
             else:
