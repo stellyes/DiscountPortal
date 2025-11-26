@@ -337,10 +337,7 @@ with tab1:
                     codes = load_codes(sheet)
                     if code_input not in codes:
                         st.error("❌ Invalid code")
-                    else:
-                        # Debug: show what we're reading
-                        st.info(f"Debug - Code data: {codes[code_input]}")
-                        
+                    else:                        
                         if codes[code_input]["redeemed"]:
                             st.warning("⚠️ This code has already been redeemed")
                             # Show deal info for already redeemed codes
