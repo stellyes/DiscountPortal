@@ -154,26 +154,34 @@ def save_codes_batch(sheet, codes_list, deal=''):
 def update_code_status(sheet, code, redeemed=True):
     """Update code redemption status"""
     try:
-        cell = sheet.find(str(code))
-        if cell:
-            row = cell.row
-            # Update Redeemed column with uppercase TRUE/FALSE for consistency
-            redeemed_str = 'TRUE' if redeemed else 'FALSE'
-            sheet.update_cell(row, 3, redeemed_str)
-            
-            if redeemed:
-                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                sheet.update_cell(row, 4, timestamp)
-            else:
-                sheet.update_cell(row, 4, '')
-            
-            # Verify the update was successful by reading it back
-            import time
-            time.sleep(0.5)  # Small delay to ensure Google Sheets processes the update
-            updated_value = sheet.cell(row, 3).value
-            
-            return True
-        return False
+        # Get all values to find the exact row
+        all_values = sheet.get_all_values()
+        
+        # Find the row with this code in column A (index 0)
+        target_row = None
+        for row_idx, row in enumerate(all_values):
+            if len(row) > 0 and str(row[0]).strip() == str(code).strip():
+                target_row = row_idx + 1  # Sheets are 1-indexed
+                break
+        
+        if target_row is None:
+            st.error(f"Could not find code {code} in sheet")
+            return False
+        
+        # Update column C (index 3) with redeemed status
+        redeemed_str = 'TRUE' if redeemed else 'FALSE'
+        sheet.update_cell(target_row, 3, redeemed_str)
+        
+        # Update column D (index 4) with timestamp or clear it
+        if redeemed:
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            sheet.update_cell(target_row, 4, timestamp)
+        else:
+            sheet.update_cell(target_row, 4, '')
+        
+        st.info(f"Updated row {target_row}: Redeemed={redeemed_str}, Timestamp={'set' if redeemed else 'cleared'}")
+        
+        return True
     except Exception as e:
         st.error(f"Error updating code: {str(e)}")
         import traceback
