@@ -323,6 +323,14 @@ with tab1:
                         st.error("❌ Invalid code")
                     elif codes[code_input]["redeemed"]:
                         st.warning("⚠️ This code has already been redeemed")
+                        # Show deal info for already redeemed codes
+                        deal_text = codes[code_input].get("deal", "")
+                        if deal_text and deal_text.strip():
+                            st.markdown(f"""
+                                <h1 style="text-align: center; color: #1976d2; margin: 2rem 0;">
+                                    💼 {deal_text}
+                                </h1>
+                            """, unsafe_allow_html=True)
                     else:
                         # Store deal text before redemption
                         deal_text = codes[code_input].get("deal", "")
@@ -339,11 +347,6 @@ with tab1:
                             else:
                                 st.info("No deal information associated with this code.")
                             st.balloons()
-                            
-                            # Add a small delay then rerun to refresh the state
-                            import time
-                            time.sleep(2)
-                            st.rerun()
                         else:
                             st.error("Error redeeming code. Please try again.")
 
