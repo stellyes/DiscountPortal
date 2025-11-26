@@ -99,7 +99,8 @@ def load_codes(sheet):
                 
                 # Handle different types for Redeemed field
                 if isinstance(redeemed_value, str):
-                    redeemed = redeemed_value.lower() == 'true'
+                    redeemed_str = redeemed_value.strip().upper()
+                    redeemed = redeemed_str == 'TRUE'
                 elif isinstance(redeemed_value, bool):
                     redeemed = redeemed_value
                 else:
@@ -133,8 +134,8 @@ def save_codes_batch(sheet, codes_list, deal=''):
         col_a_values = sheet.col_values(1)  # Get all values in column A
         next_row = len(col_a_values) + 1
         
-        # Prepare rows for batch insert
-        rows = [[str(code), str(deal), 'False', ''] for code in codes_list]
+        # Prepare rows for batch insert - use 'FALSE' in uppercase for consistency
+        rows = [[str(code), str(deal), 'FALSE', ''] for code in codes_list]
         
         # Update specific range A:D starting at next_row
         end_row = next_row + len(rows) - 1
@@ -156,15 +157,27 @@ def update_code_status(sheet, code, redeemed=True):
         cell = sheet.find(str(code))
         if cell:
             row = cell.row
-            sheet.update_cell(row, 3, str(redeemed))  # Update Redeemed column (now column 3)
+            # Update Redeemed column with uppercase TRUE/FALSE for consistency
+            redeemed_str = 'TRUE' if redeemed else 'FALSE'
+            sheet.update_cell(row, 3, redeemed_str)
+            
             if redeemed:
-                sheet.update_cell(row, 4, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))  # Update timestamp
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                sheet.update_cell(row, 4, timestamp)
             else:
-                sheet.update_cell(row, 4, '')  # Clear timestamp when unredeemed
+                sheet.update_cell(row, 4, '')
+            
+            # Verify the update was successful by reading it back
+            import time
+            time.sleep(0.5)  # Small delay to ensure Google Sheets processes the update
+            updated_value = sheet.cell(row, 3).value
+            
             return True
         return False
     except Exception as e:
         st.error(f"Error updating code: {str(e)}")
+        import traceback
+        st.error(f"Traceback: {traceback.format_exc()}")
         return False
 
 def generate_code():
@@ -321,31 +334,38 @@ with tab1:
                     codes = load_codes(sheet)
                     if code_input not in codes:
                         st.error("❌ Invalid code")
-                    elif codes[code_input]["redeemed"]:
-                        st.warning("⚠️ This code has already been redeemed")
                     else:
-                        # Store deal text before redemption
-                        deal_text = codes[code_input].get("deal", "")
+                        # Debug: show what we're reading
+                        st.info(f"Debug - Code data: {codes[code_input]}")
                         
-                        if update_code_status(sheet, code_input, True):
-                            st.success("🎉 Code successfully redeemed!")
-                            # Show deal information
+                        if codes[code_input]["redeemed"]:
+                            st.warning("⚠️ This code has already been redeemed")
+                            # Show deal info for already redeemed codes
+                            deal_text = codes[code_input].get("deal", "")
                             if deal_text and deal_text.strip():
                                 st.markdown(f"""
                                     <h1 style="text-align: center; color: #1976d2; margin: 2rem 0;">
                                         💼 {deal_text}
                                     </h1>
                                 """, unsafe_allow_html=True)
-                            else:
-                                st.info("No deal information associated with this code.")
-                            st.balloons()
-                            
-                            # Add a small delay then rerun to refresh the state
-                            import time
-                            time.sleep(2)
-                            st.rerun()
                         else:
-                            st.error("Error redeeming code. Please try again.")
+                            # Store deal text before redemption
+                            deal_text = codes[code_input].get("deal", "")
+                            
+                            if update_code_status(sheet, code_input, True):
+                                st.success("🎉 Code successfully redeemed!")
+                                # Show deal information
+                                if deal_text and deal_text.strip():
+                                    st.markdown(f"""
+                                        <h1 style="text-align: center; color: #1976d2; margin: 2rem 0;">
+                                            💼 {deal_text}
+                                        </h1>
+                                    """, unsafe_allow_html=True)
+                                else:
+                                    st.info("No deal information associated with this code.")
+                                st.balloons()
+                            else:
+                                st.error("Error redeeming code. Please try again.")
 
 # TAB 2: Admin
 with tab2:
