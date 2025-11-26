@@ -99,7 +99,8 @@ def load_codes(sheet):
                 
                 # Handle different types for Redeemed field
                 if isinstance(redeemed_value, str):
-                    redeemed = redeemed_value.lower() == 'true'
+                    redeemed_str = redeemed_value.strip().upper()
+                    redeemed = redeemed_str == 'TRUE'
                 elif isinstance(redeemed_value, bool):
                     redeemed = redeemed_value
                 else:
@@ -321,34 +322,38 @@ with tab1:
                     codes = load_codes(sheet)
                     if code_input not in codes:
                         st.error("❌ Invalid code")
-                    elif codes[code_input]["redeemed"]:
-                        st.warning("⚠️ This code has already been redeemed")
-                        # Show deal info for already redeemed codes
-                        deal_text = codes[code_input].get("deal", "")
-                        if deal_text and deal_text.strip():
-                            st.markdown(f"""
-                                <h1 style="text-align: center; color: #1976d2; margin: 2rem 0;">
-                                    💼 {deal_text}
-                                </h1>
-                            """, unsafe_allow_html=True)
                     else:
-                        # Store deal text before redemption
-                        deal_text = codes[code_input].get("deal", "")
+                        # Debug: show what we're reading
+                        st.info(f"Debug - Code data: {codes[code_input]}")
                         
-                        if update_code_status(sheet, code_input, True):
-                            st.success("🎉 Code successfully redeemed!")
-                            # Show deal information
+                        if codes[code_input]["redeemed"]:
+                            st.warning("⚠️ This code has already been redeemed")
+                            # Show deal info for already redeemed codes
+                            deal_text = codes[code_input].get("deal", "")
                             if deal_text and deal_text.strip():
                                 st.markdown(f"""
                                     <h1 style="text-align: center; color: #1976d2; margin: 2rem 0;">
                                         💼 {deal_text}
                                     </h1>
                                 """, unsafe_allow_html=True)
-                            else:
-                                st.info("No deal information associated with this code.")
-                            st.balloons()
                         else:
-                            st.error("Error redeeming code. Please try again.")
+                            # Store deal text before redemption
+                            deal_text = codes[code_input].get("deal", "")
+                            
+                            if update_code_status(sheet, code_input, True):
+                                st.success("🎉 Code successfully redeemed!")
+                                # Show deal information
+                                if deal_text and deal_text.strip():
+                                    st.markdown(f"""
+                                        <h1 style="text-align: center; color: #1976d2; margin: 2rem 0;">
+                                            💼 {deal_text}
+                                        </h1>
+                                    """, unsafe_allow_html=True)
+                                else:
+                                    st.info("No deal information associated with this code.")
+                                st.balloons()
+                            else:
+                                st.error("Error redeeming code. Please try again.")
 
 # TAB 2: Admin
 with tab2:
