@@ -337,7 +337,10 @@ with tab1:
                     codes = load_codes(sheet)
                     if code_input not in codes:
                         st.error("❌ Invalid code")
-                    else:                        
+                    else:
+                        # Debug: show what we're reading
+                        st.info(f"Debug - Code data: {codes[code_input]}")
+                        
                         if codes[code_input]["redeemed"]:
                             st.warning("⚠️ This code has already been redeemed")
                             # Show deal info for already redeemed codes
@@ -467,20 +470,56 @@ with tab2:
             
             st.markdown("---")
             
+            # Search and filter section
+            col1, col2 = st.columns([2, 1])
+            
+            with col1:
+                search_query = st.text_input(
+                    "🔍 Search for a code:",
+                    placeholder="Enter code to search...",
+                    key="code_search"
+                ).upper()
+            
+            with col2:
+                # Get unique deals for dropdown
+                unique_deals = sorted(set(c["deal"] for c in codes.values() if c["deal"]))
+                deal_options = ["All Deals"] + unique_deals
+                selected_deal = st.selectbox(
+                    "Filter by Deal:",
+                    options=deal_options,
+                    key="deal_filter"
+                )
+            
             # Filter options
             filter_option = st.radio(
-                "Filter:",
+                "Status Filter:",
                 ["All", "Available Only", "Redeemed Only"],
                 horizontal=True
             )
             
-            # Display codes
-            filtered_codes = {
-                k: v for k, v in codes.items()
-                if filter_option == "All"
-                or (filter_option == "Available Only" and not v["redeemed"])
-                or (filter_option == "Redeemed Only" and v["redeemed"])
-            }
+            # Apply all filters
+            filtered_codes = {}
+            for k, v in codes.items():
+                # Status filter
+                if filter_option == "Available Only" and v["redeemed"]:
+                    continue
+                if filter_option == "Redeemed Only" and not v["redeemed"]:
+                    continue
+                
+                # Deal filter
+                if selected_deal != "All Deals" and v["deal"] != selected_deal:
+                    continue
+                
+                # Search filter
+                if search_query and search_query not in k:
+                    continue
+                
+                filtered_codes[k] = v
+            
+            # Display filtered count
+            st.info(f"Showing {len(filtered_codes)} of {total_codes} codes")
+            
+            st.markdown("---")
             
             if filtered_codes:
                 # Display codes with reinvoke option
