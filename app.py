@@ -259,7 +259,8 @@ st.markdown("""
     .pagination-info {
         text-align: center;
         padding: 0.5rem;
-        background-color: #f5f5f5;
+        background-color: #333;
+        color: white;
         border-radius: 5px;
         margin: 0.5rem 0;
     }
