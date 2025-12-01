@@ -256,6 +256,13 @@ st.markdown("""
         margin: 1rem 0;
         border-radius: 4px;
     }
+    .pagination-info {
+        text-align: center;
+        padding: 0.5rem;
+        background-color: #f5f5f5;
+        border-radius: 5px;
+        margin: 0.5rem 0;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -516,14 +523,68 @@ with tab2:
                 
                 filtered_codes[k] = v
             
+            # Pagination setup
+            CODES_PER_PAGE = 50
+            total_filtered = len(filtered_codes)
+            total_pages = max(1, (total_filtered + CODES_PER_PAGE - 1) // CODES_PER_PAGE)
+            
+            # Initialize page number in session state
+            if 'current_page' not in st.session_state:
+                st.session_state.current_page = 1
+            
+            # Reset to page 1 if filters change or current page exceeds total pages
+            if st.session_state.current_page > total_pages:
+                st.session_state.current_page = 1
+            
             # Display filtered count
             st.info(f"Showing {len(filtered_codes)} of {total_codes} codes")
             
             st.markdown("---")
             
             if filtered_codes:
+                # Pagination controls
+                if total_pages > 1:
+                    col1, col2, col3, col4, col5 = st.columns([1, 1, 2, 1, 1])
+                    
+                    with col1:
+                        if st.button("⏮️ First", disabled=(st.session_state.current_page == 1), use_container_width=True):
+                            st.session_state.current_page = 1
+                            st.rerun()
+                    
+                    with col2:
+                        if st.button("◀️ Previous", disabled=(st.session_state.current_page == 1), use_container_width=True):
+                            st.session_state.current_page -= 1
+                            st.rerun()
+                    
+                    with col3:
+                        st.markdown(f"<div class='pagination-info'><strong>Page {st.session_state.current_page} of {total_pages}</strong></div>", unsafe_allow_html=True)
+                    
+                    with col4:
+                        if st.button("Next ▶️", disabled=(st.session_state.current_page == total_pages), use_container_width=True):
+                            st.session_state.current_page += 1
+                            st.rerun()
+                    
+                    with col5:
+                        if st.button("Last ⏭️", disabled=(st.session_state.current_page == total_pages), use_container_width=True):
+                            st.session_state.current_page = total_pages
+                            st.rerun()
+                    
+                    st.markdown("---")
+                
+                # Calculate pagination slice
+                start_idx = (st.session_state.current_page - 1) * CODES_PER_PAGE
+                end_idx = start_idx + CODES_PER_PAGE
+                
+                # Get codes for current page
+                sorted_codes = sorted(filtered_codes.items())
+                page_codes = sorted_codes[start_idx:end_idx]
+                
+                # Show how many codes are being displayed on this page
+                codes_on_page = len(page_codes)
+                st.caption(f"Displaying codes {start_idx + 1} to {start_idx + codes_on_page} of {total_filtered} filtered codes")
+                
                 # Display codes with reinvoke option
-                for code, data in sorted(filtered_codes.items()):
+                for code, data in page_codes:
                     status = "Redeemed" if data["redeemed"] else "Available"
                     css_class = "code-redeemed" if data["redeemed"] else "code-available"
                     
@@ -563,6 +624,34 @@ with tab2:
                                         st.error(f"Error reinvoking {code}")
                         else:
                             st.write("")  # Spacing for alignment
+                
+                # Bottom pagination controls (for convenience on long pages)
+                if total_pages > 1:
+                    st.markdown("---")
+                    col1, col2, col3, col4, col5 = st.columns([1, 1, 2, 1, 1])
+                    
+                    with col1:
+                        if st.button("⏮️ First ", disabled=(st.session_state.current_page == 1), use_container_width=True, key="first_bottom"):
+                            st.session_state.current_page = 1
+                            st.rerun()
+                    
+                    with col2:
+                        if st.button("◀️ Previous ", disabled=(st.session_state.current_page == 1), use_container_width=True, key="prev_bottom"):
+                            st.session_state.current_page -= 1
+                            st.rerun()
+                    
+                    with col3:
+                        st.markdown(f"<div class='pagination-info'><strong>Page {st.session_state.current_page} of {total_pages}</strong></div>", unsafe_allow_html=True)
+                    
+                    with col4:
+                        if st.button("Next ▶️ ", disabled=(st.session_state.current_page == total_pages), use_container_width=True, key="next_bottom"):
+                            st.session_state.current_page += 1
+                            st.rerun()
+                    
+                    with col5:
+                        if st.button("Last ⏭️ ", disabled=(st.session_state.current_page == total_pages), use_container_width=True, key="last_bottom"):
+                            st.session_state.current_page = total_pages
+                            st.rerun()
             else:
                 st.info("No codes match the selected filter.")
             
@@ -594,5 +683,6 @@ st.markdown("""
         <p>💡 Codes are stored in Google Sheets for persistence</p>
         <p>🔐 Admin password configured via Streamlit secrets</p>
         <p>💼 Associate deals with code batches for better tracking</p>
+        <p>📄 Viewing 50 codes per page for optimal performance</p>
     </div>
 """, unsafe_allow_html=True)
